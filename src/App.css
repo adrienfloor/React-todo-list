@@ -49,6 +49,10 @@ li {
   color: red;
 }
 
+.success {
+  color: green;
+}
+
 li:hover span.delete-item {
   visibility: visible;
 }

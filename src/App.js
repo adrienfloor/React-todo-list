@@ -4,35 +4,50 @@ import './App.css';
 import {TodoForm, TodoList} from './components/todo';
 import {addTodo, generateId, findById, updateTodo, toggleTodo, removeTodo} from './lib/todoHelpers';
 import {partial, pipe} from './lib/utils';
+import {loadTodos, createTodo, saveTodo, destroyTodo} from './lib/todoService';
 
 class App extends Component {
   state = {
-    todos : [
-      {id:1, name:'JSX', isComplete:false},
-      {id:2, name:'Javascript', isComplete:false},
-      {id:3, name:'React', isComplete:false}
-    ],
+    todos : [],
     currentTodo: ''
+  }
+
+  componentDidMount() {
+    loadTodos()
+      .then(todos => this.setState({todos}))
   }
 
   handleRemove = (id, e) => {
     e.preventDefault();
     const updatedTodos = removeTodo(this.state.todos, id);
-    this.setState({todos: updatedTodos})
+    this.setState({todos: updatedTodos});
+    destroyTodo(id)
+      .then(() => this.showTempMessage('Todo removed'))
   }
 
   handleToggle = (id) => {
-    const getUpdatedTodos = pipe(findById, toggleTodo, partial(updateTodo, this.state.todos));
-    const updatedTodos = getUpdatedTodos(id, this.state.todos);
-    this.setState({todos: updatedTodos})
+    const getToggledTodo = pipe(findById, toggleTodo);
+    const updated = getToggledTodo(id, this.state.todos);
+    const getUpdatedTodos = partial(updateTodo, this.state.todos);
+    const updatedTodos = getUpdatedTodos(updated);
+    this.setState({todos: updatedTodos});
+    saveTodo(updated)
+      .then(() => this.showTempMessage('Todo updated'))
 
   }
   handleSubmit = (e) => {
     e.preventDefault();
     const newId  = generateId();
-    const newTodo = {id: newId, name: this.state.currentTodo, isComplete: false }
-    const updatedTodos = addTodo(this.state.todos, newTodo)
-    this.setState({todos: updatedTodos, currentTodo: '', errorMessage: ''})
+    const newTodo = {id: newId, name: this.state.currentTodo, isComplete: false };
+    const updatedTodos = addTodo(this.state.todos, newTodo);
+    this.setState({todos: updatedTodos, currentTodo: '', errorMessage: ''});
+    createTodo(newTodo)
+      .then(() => this.showTempMessage('Todo added'))
+  }
+
+  showTempMessage = (msg) => {
+    this.setState({message: msg})
+    setTimeout(() => this.setState({message: ''}), 2500)
   }
 
   handleEmptySubmit = (e) => {
@@ -54,6 +69,7 @@ class App extends Component {
         </div>
         <div className="Todo-App">
         {this.state.errorMessage && <span className="error">{this.state.errorMessage}</span>}
+        {this.state.message && <span className="success">{this.state.message}</span>}
         <TodoForm handleSubmit={submitHandler}
                   handleInputChange={this.handleInputChange}
                   currentTodo={this.state.currentTodo}/>
